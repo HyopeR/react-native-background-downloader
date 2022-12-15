@@ -65,7 +65,7 @@ RCT_EXPORT_MODULE();
         idToResumeDataMap= [[NSMutableDictionary alloc] init];
         idToPercentMap = [[NSMutableDictionary alloc] init];
         NSString *bundleIdentifier = [[NSBundle mainBundle] bundleIdentifier];
-        NSString *sessionIdentifier = [bundleIdentifier stringByAppendingString:@".backgrounddownloadtask"];
+        NSString *sessionIdentifier = [[NSUUID UUID] UUIDString];
         sessionConfig = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:sessionIdentifier];
         sessionConfig.HTTPMaximumConnectionsPerHost = 4;
         sessionConfig.timeoutIntervalForRequest = 60 * 60; // MAX TIME TO GET NEW DATA IN REQUEST - 1 HOUR
@@ -82,6 +82,7 @@ RCT_EXPORT_MODULE();
         progressReports = [[NSMutableDictionary alloc] init];
         lastProgressReport = [[NSDate alloc] init];
         sharedLock = [NSNumber numberWithInt:1];
+        [self lazyInitSession];
     }
     return self;
 }
@@ -92,6 +93,12 @@ RCT_EXPORT_MODULE();
         if (urlSession == nil) {
             urlSession = [NSURLSession sessionWithConfiguration:sessionConfig delegate:self delegateQueue:nil];
         }
+    }
+}
+
+- (void)lazyInitNotification {
+    NSLog(@"[RNBackgroundDownloader] - [lazyInitNotification]");
+    @synchronized (sharedLock) {
         if (isNotificationCenterInited != YES) {
             isNotificationCenterInited = YES;
             [[NSNotificationCenter defaultCenter] addObserver:self
@@ -165,9 +172,7 @@ RCT_EXPORT_MODULE();
 
 + (void)setCompletionHandlerWithIdentifier: (NSString *)identifier completionHandler: (CompletionHandler)completionHandler {
     NSLog(@"[RNBackgroundDownloader] - [setCompletionHandlerWithIdentifier]");
-    NSString *bundleIdentifier = [[NSBundle mainBundle] bundleIdentifier];
-    NSString *sessionIdentifier = [bundleIdentifier stringByAppendingString:@".backgrounddownloadtask"];
-    if ([sessionIdentifier isEqualToString:identifier]) {
+    if (identifier != nil) {
         storedCompletionHandler = completionHandler;
     }
 }
@@ -215,7 +220,7 @@ RCT_EXPORT_METHOD(download: (NSDictionary *) options) {
     }
 
     @synchronized (sharedLock) {
-        [self lazyInitSession];
+        [self lazyInitNotification];
         NSURLSessionDownloadTask __strong *task = [urlSession downloadTaskWithRequest:request];
         if (task == nil) {
             NSLog(@"[RNBackgroundDownloader] - [Error] failed to create download task");
@@ -268,7 +273,7 @@ RCT_EXPORT_METHOD(stopTask: (NSString *)identifier) {
 
 RCT_EXPORT_METHOD(checkForExistingDownloads: (RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
     NSLog(@"[RNBackgroundDownloader] - [checkForExistingDownloads]");
-    [self lazyInitSession];
+    [self lazyInitNotification];
     [urlSession getTasksWithCompletionHandler:^(NSArray<NSURLSessionDataTask *> * _Nonnull dataTasks, NSArray<NSURLSessionUploadTask *> * _Nonnull uploadTasks, NSArray<NSURLSessionDownloadTask *> * _Nonnull downloadTasks) {
         NSMutableArray *idsFound = [[NSMutableArray alloc] init];
         @synchronized (sharedLock) {
