@@ -1,48 +1,25 @@
-import React, { useEffect, useState } from 'react'
-import { StyleSheet, View, Text, FlatList, Platform } from 'react-native'
-import RNFS from 'react-native-fs'
+import React, {useEffect, useState} from 'react';
+import {StyleSheet, View, Text, FlatList} from 'react-native';
+import RNFS from 'react-native-fs';
 import {
+  DownloadTask,
   completeHandler,
   directories,
   checkForExistingDownloads,
   download,
   setConfig,
-} from '@kesha-antonov/react-native-background-downloader'
-import Slider from '@react-native-community/slider'
-import { ExButton, ExWrapper } from '../../components/commons'
-import { toast, uuid } from '../../utils'
+} from '@kesha-antonov/react-native-background-downloader';
+import Slider from '@react-native-community/slider';
+import {ExButton, ExWrapper} from '../../components/commons';
+import {toast, uuid} from '../../utils';
+import {Footer} from './Footer';
 
-const defaultDir = directories.documents
+const defaultDir = directories.documents;
+const testDir = `${defaultDir}/test`;
 
 setConfig({
-  isLogsEnabled: true,
-})
-
-const Footer = ({
-  onStart,
-  onStop,
-  onReset,
-  onClear,
-  onRead,
-  isStarted,
-  ...props
-}) => {
-  return (
-    <View style={styles.headerWrapper} {...props}>
-      {isStarted
-        ? (
-          <ExButton title={'Stop'} onPress={onStop} />
-        )
-        : (
-          <ExButton title={'Start'} onPress={onStart} />
-        )}
-
-      <ExButton title={'Reset'} onPress={onReset} />
-      <ExButton title={'Delete files'} onPress={onClear} />
-      <ExButton title={'List files'} onPress={onRead} />
-    </View>
-  )
-}
+  isLogsEnabled: false,
+});
 
 const BasicExampleScreen = () => {
   const [urlList] = useState([
@@ -58,92 +35,98 @@ const BasicExampleScreen = () => {
       id: uuid(),
       url: 'https://proof.ovh.net/files/100Mb.dat',
     },
-  ])
+  ]);
 
-  const [isStarted, setIsStarted] = useState(false)
+  const [isStarted, setIsStarted] = useState(false);
 
-  const [downloadTasks, setDownloadTasks] = useState([])
+  const [downloadTasks, setDownloadTasks] = useState<DownloadTask[]>([]);
 
   /**
    * It is used to resume your incomplete or unfinished downloads.
    */
   const resumeExistingTasks = async () => {
     try {
-      const tasks = await checkForExistingDownloads()
+      const tasks = await checkForExistingDownloads();
 
-      console.log(tasks)
+      console.log(tasks);
 
       if (tasks.length > 0) {
-        tasks.map(task => process(task))
-        setDownloadTasks(downloadTasks => [...downloadTasks, ...tasks])
-        setIsStarted(true)
+        tasks.map(task => process(task));
+        setDownloadTasks(_downloadTasks => [..._downloadTasks, ...tasks]);
+        setIsStarted(true);
       }
     } catch (e) {
-      console.warn('checkForExistingDownloads e', e)
+      console.warn('checkForExistingDownloads e', e);
     }
-  }
+  };
 
   const readStorage = async () => {
-    const files = await RNFS.readdir(defaultDir)
-    toast('Check logs')
-    console.log(`Downloaded files: ${files}`)
-  }
+    const files = await RNFS.readdir(defaultDir);
+    toast('Check logs');
+    console.log(`Downloaded path: ${defaultDir}`);
+    console.log(`Downloaded files: ${files}`);
+  };
 
   const clearStorage = async () => {
-    const files = await RNFS.readdir(defaultDir)
+    const files = await RNFS.readdir(defaultDir);
 
-    if (files.length > 0)
+    if (files.length > 0) {
       await Promise.all(
-        files.map(file => RNFS.unlink(defaultDir + '/' + file))
-      )
+        files.map(file => RNFS.unlink(defaultDir + '/' + file)),
+      );
+    }
 
-    toast('Check logs')
-    console.log(`Deleted file count: ${files.length}`)
-  }
+    toast('Check logs');
+    console.log(`Deleted file count: ${files.length}`);
+  };
 
-  const process = task => {
-    const { index } = getTask(task.id)
+  const process = (task: DownloadTask) => {
+    const {index} = getTask(task.id);
 
     return task
-      .begin(({ expectedBytes, headers }) => {
-        console.log('task: begin', { id: task.id, expectedBytes, headers })
-        setDownloadTasks(downloadTasks => {
-          downloadTasks[index] = task
-          return [...downloadTasks]
-        })
+      .begin(({expectedBytes, headers}) => {
+        console.log('task: begin', {id: task.id, expectedBytes, headers});
+        setDownloadTasks(_downloadTasks => {
+          _downloadTasks[index] = task;
+          return [..._downloadTasks];
+        });
       })
-      .progress(({ bytesDownloaded, bytesTotal }) => {
-        console.log('task: progress', { id: task.id, bytesDownloaded, bytesTotal })
-        setDownloadTasks(downloadTasks => {
-          downloadTasks[index] = task
-          return [...downloadTasks]
-        })
+      .progress(({bytesDownloaded, bytesTotal}) => {
+        console.log('task: progress', {
+          id: task.id,
+          bytesDownloaded,
+          bytesTotal,
+        });
+        setDownloadTasks(_downloadTasks => {
+          _downloadTasks[index] = task;
+          return [..._downloadTasks];
+        });
       })
       .done(() => {
-        console.log('task: done', { id: task.id })
-        setDownloadTasks(downloadTasks => {
-          downloadTasks[index] = task
-          return [...downloadTasks]
-        })
+        console.log('task: done', {id: task.id});
+        setDownloadTasks(_downloadTasks => {
+          _downloadTasks[index] = task;
+          return [..._downloadTasks];
+        });
 
-        completeHandler(task.id)
+        completeHandler(task.id);
       })
       .error(e => {
-        console.error('task: error', { id: task.id, e })
-        setDownloadTasks(downloadTasks => {
-          downloadTasks[index] = task
-          return [...downloadTasks]
-        })
+        console.error('task: error', {id: task.id, e});
+        setDownloadTasks(_downloadTasks => {
+          _downloadTasks[index] = task;
+          return [..._downloadTasks];
+        });
 
-        completeHandler(task.id)
-      })
-  }
+        completeHandler(task.id);
+      });
+  };
 
   const reset = () => {
-    stop()
-    setDownloadTasks([])
-    setIsStarted(false)
-  }
+    stop();
+    setDownloadTasks([]);
+    setIsStarted(false);
+  };
 
   const start = () => {
     /**
@@ -152,80 +135,80 @@ const BasicExampleScreen = () => {
      * For example; Path + File Name + .png
      */
     const taskAttributes = urlList.map(item => {
-      const destination = defaultDir + '/' + item.id
+      const destination = defaultDir + '/' + item.id;
       return {
         id: item.id,
         url: item.url,
-        destination,
-      }
-    })
+        destination: destination,
+      };
+    });
 
     const tasks = taskAttributes.map(taskAttribute =>
-      process(download(taskAttribute))
-    )
+      process(download(taskAttribute)),
+    );
 
-    setDownloadTasks(downloadTasks => [...downloadTasks, ...tasks])
-    setIsStarted(true)
-  }
+    setDownloadTasks(_downloadTasks => [..._downloadTasks, ...tasks]);
+    setIsStarted(true);
+  };
 
   const stop = () => {
     const tasks = downloadTasks.map(task => {
-      task.stop()
-      return task
-    })
+      task.stop();
+      return task;
+    });
 
-    setDownloadTasks(tasks)
-    setIsStarted(false)
-  }
+    setDownloadTasks(tasks);
+    setIsStarted(false);
+  };
 
-  const pause = id => {
-    const { index, task } = getTask(id)
+  const pause = (id: string) => {
+    const {index, task} = getTask(id);
 
-    task.pause()
-    setDownloadTasks(downloadTasks => {
-      downloadTasks[index] = task
-      return [...downloadTasks]
-    })
-  }
+    task.pause();
+    setDownloadTasks(_downloadTasks => {
+      _downloadTasks[index] = task;
+      return [..._downloadTasks];
+    });
+  };
 
-  const resume = id => {
-    const { index, task } = getTask(id)
+  const resume = (id: string) => {
+    const {index, task} = getTask(id);
 
-    task.resume()
-    setDownloadTasks(downloadTasks => {
-      downloadTasks[index] = task
-      return [...downloadTasks]
-    })
-  }
+    task.resume();
+    setDownloadTasks(_downloadTasks => {
+      _downloadTasks[index] = task;
+      return [..._downloadTasks];
+    });
+  };
 
-  const cancel = id => {
-    const { index, task } = getTask(id)
+  const cancel = (id: string) => {
+    const {index, task} = getTask(id);
 
-    task.stop()
-    setDownloadTasks(downloadTasks => {
-      downloadTasks[index] = task
-      return [...downloadTasks]
-    })
-  }
+    task.stop();
+    setDownloadTasks(_downloadTasks => {
+      _downloadTasks[index] = task;
+      return [..._downloadTasks];
+    });
+  };
 
-  const getTask = id => {
-    const index = downloadTasks.findIndex(task => task.id === id)
-    const task = downloadTasks[index]
-    return { index, task }
-  }
+  const getTask = (id: string) => {
+    const index = downloadTasks.findIndex(task => task.id === id);
+    const task = downloadTasks[index];
+    return {index, task};
+  };
 
   useEffect(() => {
-    resumeExistingTasks()
-  }, [])
+    resumeExistingTasks();
+  }, []);
 
   return (
     <ExWrapper>
       <Text style={styles.title}>Basic Example</Text>
-      <View>
+      <View style={{flex: 1}}>
         <FlatList
           data={urlList}
           keyExtractor={(item, index) => `url-${index}`}
-          renderItem={({ index, item }) => (
+          renderItem={({item}) => (
             <View style={styles.item}>
               <View style={styles.itemContent}>
                 <Text>Id: {item.id}</Text>
@@ -233,24 +216,27 @@ const BasicExampleScreen = () => {
               </View>
             </View>
           )}
-          ListFooterComponent={() => (
-            <Footer
-              isStarted={isStarted}
-              onStart={start}
-              onStop={stop}
-              onReset={reset}
-              onClear={clearStorage}
-              onRead={readStorage}
-            />
+          ListHeaderComponent={() => (
+            <View style={styles.footer}>
+              <Footer
+                isStarted={isStarted}
+                onStart={start}
+                onStop={stop}
+                onReset={reset}
+                onClear={clearStorage}
+                onRead={readStorage}
+              />
+            </View>
           )}
         />
       </View>
+
       <FlatList
-        style={{ flex: 1, flexGrow: 1 }}
+        style={{flex: 1}}
         data={downloadTasks}
-        renderItem={({ item, index }) => {
-          const isEnded = ['STOPPED', 'DONE', 'FAILED'].includes(item.state)
-          const isDownloading = item.state === 'DOWNLOADING'
+        renderItem={({item}) => {
+          const isEnded = ['STOPPED', 'DONE', 'FAILED'].includes(item.state);
+          const isDownloading = item.state === 'DOWNLOADING';
 
           return (
             <View style={styles.item}>
@@ -266,33 +252,27 @@ const BasicExampleScreen = () => {
               </View>
               <View>
                 {!isEnded &&
-                  (isDownloading
-                    ? (
-                      <ExButton title={'Pause'} onPress={() => pause(item.id)} />
-                    )
-                    : (
-                      <ExButton
-                        title={'Resume'}
-                        onPress={() => resume(item.id)}
-                      />
-                    ))}
+                  (isDownloading ? (
+                    <ExButton title={'Pause'} onPress={() => pause(item.id)} />
+                  ) : (
+                    <ExButton
+                      title={'Resume'}
+                      onPress={() => resume(item.id)}
+                    />
+                  ))}
                 <ExButton title={'Cancel'} onPress={() => cancel(item.id)} />
               </View>
             </View>
-          )
+          );
         }}
         keyExtractor={(item, index) => `task-${index}`}
       />
     </ExWrapper>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
-  headerWrapper: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-evenly',
+  footer: {
     padding: 6,
   },
   title: {
@@ -312,6 +292,6 @@ const styles = StyleSheet.create({
     flex: 1,
     flexShrink: 1,
   },
-})
+});
 
-export default BasicExampleScreen
+export default BasicExampleScreen;

@@ -1,12 +1,8 @@
-import React from 'react'
-import {
-  TouchableOpacity,
-  TouchableOpacityProps,
-  Text,
-  StyleSheet,
-} from 'react-native'
+import React from 'react';
+import {TouchableOpacity, Text, StyleSheet} from 'react-native';
+import {ExButtonProps} from './index.type';
 
-const ExButton = ({ title, style, ...props }: TouchableOpacityProps) => {
+const ExButton = ({title, style, ...props}: ExButtonProps) => {
   return (
     <TouchableOpacity
       style={[styles.wrapper, style]}
@@ -14,8 +10,8 @@ const ExButton = ({ title, style, ...props }: TouchableOpacityProps) => {
       {...props}>
       <Text style={styles.title}>{title}</Text>
     </TouchableOpacity>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   wrapper: {
@@ -30,6 +26,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
   },
-})
+});
 
-export default ExButton
+export default ExButton;
+export type {ExButtonProps};
